@@ -54,7 +54,7 @@ func (simulator *imageMatcherSimulator) Simulate(g goga.Genome) {
 		}
 	}
 
-	g.SetFitness(int(fitness))
+	g.SetFitness(fitness)
 }
 func (simulator *imageMatcherSimulator) ExitFunc(g goga.Genome) bool {
 	return simulator.totalIterations >= maxIterations
@@ -145,9 +145,7 @@ func main() {
 			{P: 1.0, F: goga.Roulette},
 		},
 	)
-
-	genAlgo.Init(populationSize, parallelSimulations)
-
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(parallelSimulations))
 	startTime := time.Now()
 	genAlgo.Simulate()
 	fmt.Println(time.Since(startTime))

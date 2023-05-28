@@ -55,7 +55,7 @@ func (s *SelectorSuite) TestShouldRouletteWhenTotalFitnessIs0(t *C) {
 	genomeArray := make([]goga.Genome, numGenomes)
 	for i := 0; i < numGenomes; i++ {
 		genomeArray[i] = goga.NewGenome(goga.Bitset{})
-		genomeArray[i].SetFitness(i)
+		genomeArray[i].SetFitness(float64(i))
 	}
 
 	goga.Roulette(genomeArray, 0)
@@ -90,7 +90,7 @@ func (s *SelectorSuite) TestShouldPassBackGenomeFromGenomeArray(t *C) {
 
 	totalFitness := numGenomes
 	for i := 0; i < 100; i++ {
-		selectedGenome := goga.Roulette(genomeArray, totalFitness)
+		selectedGenome := goga.Roulette(genomeArray, float64(totalFitness))
 
 		found := false
 		for i := range genomeArray {
@@ -109,11 +109,11 @@ func (s *SelectorSuite) TestShouldConfig_Multiple(t *C) {
 	for i := 0; i < 100; i++ {
 		numCalls1 := 0
 		numCalls2 := 0
-		myFunc1 := func(array []goga.Genome, totalFitness int) goga.Genome {
+		myFunc1 := func(array []goga.Genome, totalFitness float64) goga.Genome {
 			numCalls1++
 			return array[0]
 		}
-		myFunc2 := func(array []goga.Genome, totalFitness int) goga.Genome {
+		myFunc2 := func(array []goga.Genome, totalFitness float64) goga.Genome {
 			numCalls2++
 			return array[0]
 		}

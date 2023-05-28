@@ -6,7 +6,7 @@ import (
 
 // Selector - a selector interface used to pick 2 genomes to mate
 type Selector interface {
-	Go([]Genome, int) Genome
+	Go([]Genome, float64) Genome
 }
 
 // NullSelector - a null implementation of the Selector interface
@@ -14,7 +14,7 @@ type NullSelector struct {
 }
 
 // Go - a null implementation of Selector's 'go'
-func (ns *NullSelector) Go(genomes []Genome, totalFitness int) Genome {
+func (ns *NullSelector) Go(genomes []Genome, totalFitness float64) Genome {
 	return genomes[0]
 }
 
@@ -25,7 +25,7 @@ func (ns *NullSelector) Go(genomes []Genome, totalFitness int) Genome {
 // 0 = never called, 1 = called every time we need a new genome to mate
 type SelectorFunctionProbability struct {
 	P float32
-	F func([]Genome, int) Genome
+	F func([]Genome, float64) Genome
 }
 
 type selector struct {
@@ -40,7 +40,7 @@ func NewSelector(selectorConfig []SelectorFunctionProbability) Selector {
 }
 
 // Go - cycles through the selector function probabilities until one returns a genome
-func (s *selector) Go(genomeArray []Genome, totalFitness int) Genome {
+func (s *selector) Go(genomeArray []Genome, totalFitness float64) Genome {
 	for {
 		for _, config := range s.selectorConfig {
 			if rand.Float32() < config.P {
@@ -51,7 +51,7 @@ func (s *selector) Go(genomeArray []Genome, totalFitness int) Genome {
 }
 
 // Roulette is a selection function that selects a genome where genomes that have a higher fitness are more likely to be picked
-func Roulette(genomeArray []Genome, totalFitness int) Genome {
+func Roulette(genomeArray []Genome, totalFitness float64) Genome {
 
 	if len(genomeArray) == 0 {
 		panic("genome array contains no elements")
@@ -62,7 +62,7 @@ func Roulette(genomeArray []Genome, totalFitness int) Genome {
 		return genomeArray[randomIndex]
 	}
 
-	randomFitness := rand.Intn(totalFitness)
+	randomFitness := rand.Float64() * totalFitness
 	for i := range genomeArray {
 		randomFitness -= genomeArray[i].GetFitness()
 		if randomFitness <= 0 {

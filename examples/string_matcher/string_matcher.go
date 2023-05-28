@@ -32,7 +32,7 @@ func (sms *stringMaterSimulator) Simulate(g goga.Genome) {
 	}
 }
 func (sms *stringMaterSimulator) ExitFunc(g goga.Genome) bool {
-	return g.GetFitness() == targetLength
+	return g.GetFitness() == float64(targetLength)
 }
 
 type myBitsetCreate struct {
@@ -108,7 +108,7 @@ func main() {
 		},
 	)
 
-	genAlgo.Init(populationSize, numThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(numThreads))
 
 	startTime := time.Now()
 	genAlgo.Simulate()

@@ -1,6 +1,7 @@
 package goga
 
 import (
+	"sort"
 	"sync"
 	"time"
 )
@@ -19,12 +20,38 @@ type GeneticAlgorithm struct {
 	BitsetCreate  BitsetCreate
 
 	populationSize          int
+	MaterExtraRatio         int
 	population              []Genome
-	totalFitness            int
+	totalFitness            float64
 	genomeSimulationChannel chan Genome
 	exitFunc                func(Genome) bool
 	waitGroup               *sync.WaitGroup
 	parallelSimulations     int
+}
+
+type Options struct {
+	PopulationSize      int
+	MaterExtraRatio     int
+	ParallelSimulations int
+}
+type Option func(*Options)
+
+func PopulationSize(n int) Option {
+	return func(o *Options) {
+		o.PopulationSize = n
+	}
+}
+
+func MaterExtraRatio(n int) Option {
+	return func(o *Options) {
+		o.MaterExtraRatio = n
+	}
+}
+
+func ParallelSimulations(n int) Option {
+	return func(o *Options) {
+		o.ParallelSimulations = n
+	}
 }
 
 // NewGeneticAlgorithm returns a new GeneticAlgorithm structure with null implementations of
@@ -49,11 +76,20 @@ func (ga *GeneticAlgorithm) createPopulation() []Genome {
 
 // Init initialises internal components, sets up the population size
 // and number of parallel simulations
-func (ga *GeneticAlgorithm) Init(populationSize, parallelSimulations int) {
-	ga.populationSize = populationSize
-	ga.population = ga.createPopulation()
-	ga.parallelSimulations = parallelSimulations
+func (ga *GeneticAlgorithm) Init(opt ...Option) {
+	opts := Options{
+		PopulationSize:      10,
+		MaterExtraRatio:     2,
+		ParallelSimulations: 1,
+	}
+	for _, o := range opt {
+		o(&opts)
+	}
 
+	ga.populationSize = opts.PopulationSize
+	ga.population = ga.createPopulation()
+	ga.parallelSimulations = opts.ParallelSimulations
+	ga.MaterExtraRatio = opts.MaterExtraRatio
 	ga.waitGroup = new(sync.WaitGroup)
 }
 
@@ -138,22 +174,27 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 
 		ga.beginSimulation()
 
-		newPopulation := ga.createPopulation()
-		for i := 0; i < ga.populationSize; i += 2 {
+		newPopulationSize := ga.populationSize * ga.MaterExtraRatio
+		newPopulation := make([]Genome, newPopulationSize) //ga.createPopulation()
+
+		for i := 0; i < newPopulationSize; i += 2 {
 			g1 := ga.Selector.Go(ga.population, ga.totalFitness)
 			g2 := ga.Selector.Go(ga.population, ga.totalFitness)
-
 			g3, g4 := ga.Mater.Go(g1, g2)
-
 			newPopulation[i] = g3
 			ga.onNewGenomeToSimulate(newPopulation[i])
-
-			if (i + 1) < ga.populationSize {
+			if (i + 1) < newPopulationSize {
 				newPopulation[i+1] = g4
 				ga.onNewGenomeToSimulate(newPopulation[i+1])
 			}
 		}
-		ga.population = newPopulation
+		for i := 0; i < ga.populationSize; i++ {
+			ga.onNewGenomeToSimulate(newPopulation[i])
+		}
+		sort.SliceStable(newPopulation, func(i, j int) bool {
+			return newPopulation[i].GetFitness() > newPopulation[j].GetFitness()
+		})
+		ga.population = newPopulation[:ga.populationSize]
 		ga.syncSimulatingGenomes()
 		ga.Simulator.OnEndSimulation()
 	}

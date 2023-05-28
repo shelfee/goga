@@ -37,7 +37,7 @@ func (s *GeneticAlgorithmSuite) TestShouldSimulateUntil(t *C) {
 	}
 
 	genAlgo := goga.NewGeneticAlgorithm()
-	genAlgo.Init(1, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(1), goga.ParallelSimulations(kNumThreads))
 	ret := genAlgo.SimulateUntil(exitFunc)
 	t.Assert(ret, IsTrue)
 	t.Assert(callCount, Equals, 1)
@@ -77,7 +77,7 @@ func (s *GeneticAlgorithmSuite) TestShouldCallMaterAppropriately_1(t *C) {
 	)
 
 	genAlgo := goga.NewGeneticAlgorithm()
-	genAlgo.Init(2, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(2), goga.ParallelSimulations(kNumThreads))
 	genAlgo.Mater = m
 
 	numIterations := 1000
@@ -111,7 +111,7 @@ func (s *GeneticAlgorithmSuite) TestShouldCallMaterAppropriately_2(t *C) {
 
 	genAlgo := goga.NewGeneticAlgorithm()
 	populationSize := 100
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 	genAlgo.Mater = m
 
 	numIterations := 1000
@@ -138,7 +138,7 @@ func (s *GeneticAlgorithmSuite) TestShouldCallMaterAppropriately_OddSizedPopulat
 
 	genAlgo := goga.NewGeneticAlgorithm()
 	populationSize := 99
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 	genAlgo.Mater = m
 
 	numIterations := 1000
@@ -160,7 +160,7 @@ func (s *GeneticAlgorithmSuite) TestShouldCallIntoEliteConsumer(t *C) {
 
 	ec := MyEliteConsumerCounter{}
 	genAlgo := goga.NewGeneticAlgorithm()
-	genAlgo.Init(1, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(1), goga.ParallelSimulations(kNumThreads))
 	genAlgo.EliteConsumer = &ec
 
 	numIterations := 42
@@ -183,12 +183,12 @@ func (s *GeneticAlgorithmSuite) TestShouldNotSimulateWithNoPopulation(t *C) {
 	t.Assert(ret, IsFalse)
 	t.Assert(callCount, Equals, 0)
 
-	genAlgo.Init(0, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(0), goga.ParallelSimulations(kNumThreads))
 	ret = genAlgo.SimulateUntil(exitFunc)
 	t.Assert(ret, IsFalse)
 	t.Assert(callCount, Equals, 0)
 
-	genAlgo.Init(1, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(1), goga.ParallelSimulations(kNumThreads))
 	ret = genAlgo.SimulateUntil(exitFunc)
 	t.Assert(ret, IsTrue)
 	t.Assert(callCount, Equals, 1)
@@ -200,14 +200,14 @@ func (s *GeneticAlgorithmSuite) TestShouldGetPopulation(t *C) {
 
 	t.Assert(genAlgo.GetPopulation(), HasLen, 0)
 
-	genAlgo.Init(1, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(1), goga.ParallelSimulations(kNumThreads))
 	pop := genAlgo.GetPopulation()
 	t.Assert(pop, HasLen, 1)
 
 	g := goga.NewGenome(goga.Bitset{})
 	t.Assert(pop[0], FitsTypeOf, g)
 
-	genAlgo.Init(123, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(123), goga.ParallelSimulations(kNumThreads))
 	t.Assert(genAlgo.GetPopulation(), HasLen, 123)
 
 	p1 := genAlgo.GetPopulation()
@@ -244,7 +244,7 @@ func (s *GeneticAlgorithmSuite) TestShouldSimulatePopulatonCounter(t *C) {
 	t.Assert(ms.NumCalls, Equals, 0)
 
 	populationSize := 100
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 
 	numIterations := 10
 	genAlgo.SimulateUntil(helperGenerateExitFunction(numIterations))
@@ -265,7 +265,7 @@ func (ms *MySimulatorFitness) Simulate(g goga.Genome) {
 	if randomFitness > ms.currentLargestFitness {
 		ms.currentLargestFitness = randomFitness
 	}
-	g.SetFitness(randomFitness)
+	g.SetFitness(float64(randomFitness))
 	ms.m.Unlock()
 }
 func (ms *MySimulatorFitness) OnBeginSimulation() {
@@ -283,7 +283,7 @@ type MyEliteConsumerFitness struct {
 }
 
 func (ec *MyEliteConsumerFitness) OnElite(g goga.Genome) {
-	ec.EliteFitnesses = append(ec.EliteFitnesses, g.GetFitness())
+	ec.EliteFitnesses = append(ec.EliteFitnesses, int(g.GetFitness()))
 }
 
 func (s *GeneticAlgorithmSuite) TestShouldSimulatePopulationAndPassEliteToConsumer(t *C) {
@@ -296,7 +296,7 @@ func (s *GeneticAlgorithmSuite) TestShouldSimulatePopulationAndPassEliteToConsum
 	ec := MyEliteConsumerFitness{}
 	genAlgo.EliteConsumer = &ec
 
-	genAlgo.Init(100, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(100), goga.ParallelSimulations(kNumThreads))
 
 	genAlgo.SimulateUntil(helperGenerateExitFunction(numIterations))
 
@@ -337,7 +337,7 @@ func (s *GeneticAlgorithmSuite) TestShouldCallOnBeginEndSimulation(t *C) {
 	t.Assert(ms.SimulateCalled, Equals, false)
 	t.Assert(ms.Order, HasLen, 0)
 
-	genAlgo.Init(1, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(1), goga.ParallelSimulations(kNumThreads))
 	genAlgo.SimulateUntil(helperGenerateExitFunction(1))
 
 	// Sleep and give time for threads to start up
@@ -360,12 +360,12 @@ func (s *GeneticAlgorithmSuite) TestShouldPassEliteToExitFunc(t *C) {
 	genAlgo.EliteConsumer = &ec
 
 	populationSize := 10
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 
 	passedGenomeFitnesses := make([]int, populationSize)
 	callCount := 0
 	exitFunc := func(g goga.Genome) bool {
-		passedGenomeFitnesses[callCount] = g.GetFitness()
+		passedGenomeFitnesses[callCount] = int(g.GetFitness())
 
 		callCount++
 		if callCount >= numIterations {
@@ -410,7 +410,7 @@ func (s *GeneticAlgorithmSuite) TestShouldNotCallMaterWithGenomesFromPopulation(
 		},
 	)
 
-	genAlgo.Init(10, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(10), goga.ParallelSimulations(kNumThreads))
 	genAlgo.Mater = m
 
 	numIterations := 1000
@@ -421,7 +421,7 @@ type MySelectorCounter struct {
 	CallCount int
 }
 
-func (ms *MySelectorCounter) Go(genomes []goga.Genome, totalFitness int) goga.Genome {
+func (ms *MySelectorCounter) Go(genomes []goga.Genome, totalFitness float64) goga.Genome {
 	ms.CallCount++
 	return genomes[0]
 }
@@ -434,7 +434,7 @@ func (s *GeneticAlgorithmSuite) TestShouldCallSelectorAppropriately(t *C) {
 	genAlgo.Selector = &selector
 
 	populationSize := 100
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 	t.Assert(selector.CallCount, Equals, 0)
 
 	numIterations := 100
@@ -446,7 +446,7 @@ type MySelectorPassCache struct {
 	PassedGenomes []goga.Genome
 }
 
-func (ms *MySelectorPassCache) Go(genomes []goga.Genome, totalFitness int) goga.Genome {
+func (ms *MySelectorPassCache) Go(genomes []goga.Genome, totalFitness float64) goga.Genome {
 	randomGenome := genomes[rand.Intn(len(genomes))]
 	ms.PassedGenomes = append(ms.PassedGenomes, randomGenome)
 	return randomGenome
@@ -475,7 +475,7 @@ func (s *GeneticAlgorithmSuite) TestShouldPassSelectedGenomesToMater(t *C) {
 	genAlgo.Mater = &mater
 	genAlgo.Simulator = &MySimulatorFitness{}
 
-	genAlgo.Init(100, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(100), goga.ParallelSimulations(kNumThreads))
 	genAlgo.SimulateUntil(helperGenerateExitFunction(100))
 
 	t.Assert(len(mater.PassedGenomes), Equals, len(selector.PassedGenomes))
@@ -499,14 +499,14 @@ func (s *GeneticAlgorithmSuite) TestShouldCallIntoBitsetCreate(t *C) {
 	genAlgo.BitsetCreate = &bitsetCreate
 
 	numGenomes := 100
-	genAlgo.Init(numGenomes, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(numGenomes), goga.ParallelSimulations(kNumThreads))
 
 	t.Assert(bitsetCreate.NumCalls, Equals, numGenomes)
 }
 
 type MyMaterPassCache2 struct {
 	PassedGenomes  []goga.Genome
-	runningFitness int
+	runningFitness float64
 }
 
 func (ms *MyMaterPassCache2) Go(a, b goga.Genome) (goga.Genome, goga.Genome) {
@@ -533,7 +533,7 @@ func (s *GeneticAlgorithmSuite) TestShouldReplaceOldPopulationWithMatedOne(t *C)
 	genAlgo := goga.NewGeneticAlgorithm()
 	genAlgo.Mater = &mater
 	populationSize := 10
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 	genAlgo.SimulateUntil(helperGenerateExitFunction(2))
 
 	genAlgoPopulation := genAlgo.GetPopulation()
@@ -578,7 +578,7 @@ func (s *GeneticAlgorithmSuite) TestShouldSimulateUsingSimulatorExitFunction(t *
 	t.Assert(ms.NumSimulateCalls, Equals, 0)
 
 	populationSize := 100
-	genAlgo.Init(populationSize, kNumThreads)
+	genAlgo.Init(goga.PopulationSize(populationSize), goga.ParallelSimulations(kNumThreads))
 	genAlgo.Simulate()
 
 	t.Assert(ms.NumSimulateCalls, Equals, ms.NumBeginSimulationsUntilExit*populationSize)
