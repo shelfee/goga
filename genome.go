@@ -5,11 +5,14 @@ type Genome interface {
 	GetFitness() float64
 	SetFitness(float64)
 	GetBits() *Bitset
+	GetOrigin() float64
+	SetOrigin(float64)
 }
 
 type genome struct {
 	fitness float64
 	bitset  Bitset
+	origin  float64
 }
 
 // NewGenome creates a genome with a bitset and
@@ -28,4 +31,12 @@ func (g *genome) SetFitness(fitness float64) {
 
 func (g *genome) GetBits() *Bitset {
 	return &g.bitset
+}
+
+func (g *genome) SetOrigin(origin float64) {
+	g.origin = origin
+}
+
+func (g *genome) GetOrigin() float64 {
+	return g.origin
 }

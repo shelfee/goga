@@ -96,7 +96,9 @@ func (ga *GeneticAlgorithm) Init(opt ...Option) {
 func (ga *GeneticAlgorithm) beginSimulation() {
 	ga.Simulator.OnBeginSimulation()
 	ga.totalFitness = 0
-
+	for i := 0; i < len(ga.population); i++ {
+		ga.totalFitness += ga.population[i].GetFitness()
+	}
 	ga.genomeSimulationChannel = make(chan Genome)
 
 	// todo: make configurable
@@ -110,11 +112,10 @@ func (ga *GeneticAlgorithm) beginSimulation() {
 			}
 		}(ga.genomeSimulationChannel, ga.waitGroup, ga.Simulator)
 	}
-
-	ga.waitGroup.Add(ga.populationSize)
 }
 
 func (ga *GeneticAlgorithm) onNewGenomeToSimulate(g Genome) {
+	ga.waitGroup.Add(1)
 	ga.genomeSimulationChannel <- g
 }
 
@@ -176,26 +177,33 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 
 		newPopulationSize := ga.populationSize * ga.MaterExtraRatio
 		newPopulation := make([]Genome, newPopulationSize) //ga.createPopulation()
-
-		for i := 0; i < newPopulationSize; i += 2 {
+		cache := make(map[string]bool)
+		for i := 0; i < newPopulationSize; {
 			g1 := ga.Selector.Go(ga.population, ga.totalFitness)
 			g2 := ga.Selector.Go(ga.population, ga.totalFitness)
 			g3, g4 := ga.Mater.Go(g1, g2)
-			newPopulation[i] = g3
-			ga.onNewGenomeToSimulate(newPopulation[i])
-			if (i + 1) < newPopulationSize {
-				newPopulation[i+1] = g4
-				ga.onNewGenomeToSimulate(newPopulation[i+1])
+			k := string(g3.GetBits().GetAll())
+			if _, ok := cache[k]; !ok {
+				cache[k] = true
+				newPopulation[i] = g3
+				ga.onNewGenomeToSimulate(newPopulation[i])
+				i += 1
+			}
+			if i < newPopulationSize {
+				k = string(g4.GetBits().GetAll())
+				if _, ok := cache[k]; !ok {
+					cache[k] = true
+					newPopulation[i] = g4
+					ga.onNewGenomeToSimulate(newPopulation[i])
+					i += 1
+				}
 			}
 		}
-		for i := 0; i < ga.populationSize; i++ {
-			ga.onNewGenomeToSimulate(newPopulation[i])
-		}
+		ga.syncSimulatingGenomes()
 		sort.SliceStable(newPopulation, func(i, j int) bool {
 			return newPopulation[i].GetFitness() > newPopulation[j].GetFitness()
 		})
 		ga.population = newPopulation[:ga.populationSize]
-		ga.syncSimulatingGenomes()
 		ga.Simulator.OnEndSimulation()
 	}
 

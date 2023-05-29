@@ -38,9 +38,9 @@ func (ec *myEliteConsumer) OnElite(g goga.Genome) {
 
 	ec.currentIter++
 	fitness := g.GetFitness()
-	fmt.Println(ec.currentIter, "\t", fitness, "\t", fitness-ec.previousFitness)
+	fmt.Println(ec.currentIter, "\t", fitness, "\t", int(fitness)-ec.previousFitness)
 
-	ec.previousFitness = fitness
+	ec.previousFitness = int(fitness)
 
 	time.Sleep(10 * time.Millisecond)
 }

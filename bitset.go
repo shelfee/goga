@@ -74,3 +74,26 @@ func (b *Bitset) Slice(startingBit, size int) Bitset {
 	ret.bits = b.bits[startingBit : startingBit+size]
 	return ret
 }
+
+func ParseBitsToFloat64Arr(b *Bitset) []float64 {
+	bits := b.GetAll()
+	params := make([]float64, len(bits)/8)
+	for i := 0; i < len(bits)/8; i++ {
+		paramBytes := bits[i*8 : i*8+8]
+		params[i] = ByteToFloat64(paramBytes)
+	}
+	return params
+}
+
+func ParseFloat64ArrToBits(arr []float64) *Bitset {
+	b := Bitset{}
+	b.Create(len(arr) * 8)
+	for i := 0; i < len(arr); i++ {
+		var param = arr[i]
+		byteArr := Float64ToByte(param)
+		for idx := 0; idx < 8; idx++ {
+			b.Set(i*8+idx, int(byteArr[idx]))
+		}
+	}
+	return &b
+}

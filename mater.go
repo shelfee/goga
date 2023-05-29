@@ -246,3 +246,61 @@ func Mutate(g1, g2 Genome) (Genome, Genome) {
 
 	return NewGenome(g1Bits), NewGenome(*g2.GetBits())
 }
+
+type FloatMater struct {
+	Precision int
+	MaxValue  float64
+	MinValue  float64
+	Specific  map[int]struct {
+		Precision int
+		MaxValue  float64
+		MinValue  float64
+	}
+}
+
+// ArithmeticCrossover -
+// Accepts 2 genomes and parse float function
+func (f *FloatMater) ArithmeticExchange(g1, g2 Genome) (Genome, Genome) {
+	floatArr1 := ParseBitsToFloat64Arr(g1.GetBits())
+	floatArr2 := ParseBitsToFloat64Arr(g2.GetBits())
+	newArr1 := floatArr1[:]
+	newArr2 := floatArr2[:]
+
+	for i := 0; i < len(floatArr1) && i < len(floatArr2); i++ {
+		alpha := rand.Float64()
+		if alpha < 0.5 {
+			tmp := newArr1[i]
+			newArr1[i] = newArr2[i]
+			newArr2[i] = tmp
+		}
+	}
+	return NewGenome(*ParseFloat64ArrToBits(newArr1)), NewGenome(*ParseFloat64ArrToBits(newArr2))
+}
+
+// ArithmeticCrossover -
+// Accepts 2 genomes and parse float function
+func (f *FloatMater) ArithmeticCrossover(g1, g2 Genome) (Genome, Genome) {
+	floatArr1 := ParseBitsToFloat64Arr(g1.GetBits())
+	floatArr2 := ParseBitsToFloat64Arr(g2.GetBits())
+	newArr1 := floatArr1[:]
+	newArr2 := floatArr2[:]
+
+	for i := 0; i < len(floatArr1) && i < len(floatArr2); i++ {
+		alpha := rand.Float64()
+		newArr1[i] = Round(alpha*floatArr1[i]+(1-alpha)*floatArr2[i], f.Precision)
+		newArr2[i] = Round(alpha*floatArr2[i]+(1-alpha)*floatArr1[i], f.Precision)
+	}
+	return NewGenome(*ParseFloat64ArrToBits(newArr1)), NewGenome(*ParseFloat64ArrToBits(newArr2))
+}
+
+// ArithmeticMutate -
+// Accepts 2 genomes and parse float function
+func (f *FloatMater) ArithmeticMutate(g1, g2 Genome) (Genome, Genome) {
+	floatArr1 := ParseBitsToFloat64Arr(g1.GetBits())
+	floatArr2 := ParseBitsToFloat64Arr(g2.GetBits())
+	newArr1 := floatArr1[:]
+	newArr2 := floatArr2[:]
+	randomBit := rand.Intn(len(newArr1))
+	newArr1[randomBit] = Round(rand.Float64()*(f.MaxValue-f.MinValue)+f.MinValue, f.Precision)
+	return NewGenome(*ParseFloat64ArrToBits(newArr1)), NewGenome(*ParseFloat64ArrToBits(newArr2))
+}
