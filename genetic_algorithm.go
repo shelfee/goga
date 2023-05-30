@@ -21,6 +21,7 @@ type GeneticAlgorithm struct {
 
 	populationSize          int
 	MaterExtraRatio         int
+	randomRatio             float64
 	population              []Genome
 	totalFitness            float64
 	genomeSimulationChannel chan Genome
@@ -33,12 +34,19 @@ type Options struct {
 	PopulationSize      int
 	MaterExtraRatio     int
 	ParallelSimulations int
+	randomRatio         float64
 }
 type Option func(*Options)
 
 func PopulationSize(n int) Option {
 	return func(o *Options) {
 		o.PopulationSize = n
+	}
+}
+
+func RandomRatio(n float64) Option {
+	return func(o *Options) {
+		o.randomRatio = n
 	}
 }
 
@@ -81,6 +89,7 @@ func (ga *GeneticAlgorithm) Init(opt ...Option) {
 		PopulationSize:      10,
 		MaterExtraRatio:     2,
 		ParallelSimulations: 1,
+		randomRatio:         0.1,
 	}
 	for _, o := range opt {
 		o(&opts)
@@ -127,7 +136,7 @@ func (ga *GeneticAlgorithm) syncSimulatingGenomes() {
 func (ga *GeneticAlgorithm) getElite() Genome {
 	var ret Genome
 	for i := 0; i < ga.populationSize; i++ {
-		if ret == nil || ga.population[i].GetFitness() > ret.GetFitness() {
+		if ret == nil || ga.population[i].GetFitness() > ret.GetFitness() || (ga.population[i].GetFitness() == ret.GetFitness() && ga.population[i].GetOrigin() > ret.GetOrigin()) {
 			ret = ga.population[i]
 		}
 	}
@@ -174,10 +183,10 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 		time.Sleep(1 * time.Microsecond)
 
 		ga.beginSimulation()
-
 		newPopulationSize := ga.populationSize * ga.MaterExtraRatio
 		newPopulation := make([]Genome, newPopulationSize) //ga.createPopulation()
 		cache := make(map[string]bool)
+
 		for i := 0; i < newPopulationSize; {
 			g1 := ga.Selector.Go(ga.population, ga.totalFitness)
 			g2 := ga.Selector.Go(ga.population, ga.totalFitness)
@@ -203,7 +212,14 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 		sort.SliceStable(newPopulation, func(i, j int) bool {
 			return newPopulation[i].GetFitness() > newPopulation[j].GetFitness()
 		})
-		ga.population = newPopulation[:ga.populationSize]
+		ga.population = make([]Genome, ga.populationSize)
+		for i := 0; i < ga.populationSize; i++ {
+			if i < int(float64(ga.populationSize)*(1.-ga.randomRatio)) {
+				ga.population[i] = newPopulation[i]
+			} else {
+				ga.population[i] = NewGenome(ga.BitsetCreate.Go())
+			}
+		}
 		ga.Simulator.OnEndSimulation()
 	}
 

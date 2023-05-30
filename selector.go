@@ -52,11 +52,9 @@ func (s *selector) Go(genomeArray []Genome, totalFitness float64) Genome {
 
 // Roulette is a selection function that selects a genome where genomes that have a higher fitness are more likely to be picked
 func Roulette(genomeArray []Genome, totalFitness float64) Genome {
-
 	if len(genomeArray) == 0 {
 		panic("genome array contains no elements")
 	}
-
 	if totalFitness == 0 {
 		randomIndex := rand.Intn(len(genomeArray))
 		return genomeArray[randomIndex]
@@ -71,4 +69,13 @@ func Roulette(genomeArray []Genome, totalFitness float64) Genome {
 	}
 
 	panic("total fitness is too large")
+}
+
+// RandomSelect is a selection function that selects a genome randomly
+func RandomSelect(genomeArray []Genome, totalFitness float64) Genome {
+	if len(genomeArray) == 0 {
+		panic("genome array contains no elements")
+	}
+	randomIndex := rand.Intn(len(genomeArray))
+	return genomeArray[randomIndex]
 }

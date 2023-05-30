@@ -5,6 +5,17 @@ import (
 	"math"
 )
 
+type Float64Requirement struct {
+	Precision float64
+	MaxValue  float64
+	MinValue  float64
+	Specific  map[int]struct {
+		Precision float64
+		MaxValue  float64
+		MinValue  float64
+	}
+}
+
 // Float64ToByte Float64转byte
 func Float64ToByte(float float64) []byte {
 	bits := math.Float64bits(float)
@@ -20,8 +31,8 @@ func ByteToFloat64(bytes []byte) float64 {
 }
 
 // Round 四舍五入，ROUND_HALF_UP 模式实现
-// 返回将 val 根据指定精度 precision（十进制小数点后数字的数目）进行四舍五入的结果。precision 也可以是负数或零。
-func Round(val float64, precision int) float64 {
-	p := math.Pow10(precision)
-	return math.Floor(val*p+0.5) / p
+// 返回将 val 根据指定精度 oneUnit（1被分割的单位）进行四舍五入的结果。precision 也可以是负数或零。
+// Round(1.7, 0.5) = 1.5
+func Round(val float64, oneUnit float64) float64 {
+	return math.Floor(val/oneUnit+0.5) * oneUnit
 }

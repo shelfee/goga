@@ -248,14 +248,7 @@ func Mutate(g1, g2 Genome) (Genome, Genome) {
 }
 
 type FloatMater struct {
-	Precision int
-	MaxValue  float64
-	MinValue  float64
-	Specific  map[int]struct {
-		Precision int
-		MaxValue  float64
-		MinValue  float64
-	}
+	Float64Requirement
 }
 
 // ArithmeticCrossover -
@@ -286,9 +279,13 @@ func (f *FloatMater) ArithmeticCrossover(g1, g2 Genome) (Genome, Genome) {
 	newArr2 := floatArr2[:]
 
 	for i := 0; i < len(floatArr1) && i < len(floatArr2); i++ {
+		precision := f.Precision
+		if v, ok := f.Specific[i]; ok {
+			precision = v.Precision
+		}
 		alpha := rand.Float64()
-		newArr1[i] = Round(alpha*floatArr1[i]+(1-alpha)*floatArr2[i], f.Precision)
-		newArr2[i] = Round(alpha*floatArr2[i]+(1-alpha)*floatArr1[i], f.Precision)
+		newArr1[i] = Round(alpha*floatArr1[i]+(1-alpha)*floatArr2[i], precision)
+		newArr2[i] = Round(alpha*floatArr2[i]+(1-alpha)*floatArr1[i], precision)
 	}
 	return NewGenome(*ParseFloat64ArrToBits(newArr1)), NewGenome(*ParseFloat64ArrToBits(newArr2))
 }
@@ -301,6 +298,10 @@ func (f *FloatMater) ArithmeticMutate(g1, g2 Genome) (Genome, Genome) {
 	newArr1 := floatArr1[:]
 	newArr2 := floatArr2[:]
 	randomBit := rand.Intn(len(newArr1))
-	newArr1[randomBit] = Round(rand.Float64()*(f.MaxValue-f.MinValue)+f.MinValue, f.Precision)
+	if require, ok := f.Specific[randomBit]; ok {
+		newArr1[randomBit] = Round(rand.Float64()*(require.MaxValue-require.MinValue)+require.MinValue, require.Precision)
+	} else {
+		newArr1[randomBit] = Round(rand.Float64()*(f.MaxValue-f.MinValue)+f.MinValue, f.Precision)
+	}
 	return NewGenome(*ParseFloat64ArrToBits(newArr1)), NewGenome(*ParseFloat64ArrToBits(newArr2))
 }
