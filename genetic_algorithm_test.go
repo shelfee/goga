@@ -228,9 +228,10 @@ func (ms *MySimulatorCounter) Simulate(goga.Genome) {
 	ms.NumCalls++
 	ms.m.Unlock()
 }
-func (ms *MySimulatorCounter) OnBeginSimulation() {
+func (ms *MySimulatorCounter) OnBeginSimulation() []goga.Genome {
+	return nil
 }
-func (ms *MySimulatorCounter) OnEndSimulation() {
+func (ms *MySimulatorCounter) OnEndSimulation([]goga.Genome) {
 }
 func (ms *MySimulatorCounter) ExitFunc(goga.Genome) bool {
 	return false
@@ -268,10 +269,11 @@ func (ms *MySimulatorFitness) Simulate(g goga.Genome) {
 	g.SetFitness(float64(randomFitness))
 	ms.m.Unlock()
 }
-func (ms *MySimulatorFitness) OnBeginSimulation() {
+func (ms *MySimulatorFitness) OnBeginSimulation() []goga.Genome {
 	ms.currentLargestFitness = 0
+	return nil
 }
-func (ms *MySimulatorFitness) OnEndSimulation() {
+func (ms *MySimulatorFitness) OnEndSimulation([]goga.Genome) {
 	ms.LargestFitnessess = append(ms.LargestFitnessess, ms.currentLargestFitness)
 }
 func (ms *MySimulatorFitness) ExitFunc(goga.Genome) bool {
@@ -311,15 +313,16 @@ type MySimulatorOrder struct {
 	EndCalled      bool
 }
 
-func (ms *MySimulatorOrder) OnBeginSimulation() {
+func (ms *MySimulatorOrder) OnBeginSimulation() []goga.Genome {
 	ms.Order = append(ms.Order, 1)
 	ms.SimulateCalled = true
+	return nil
 }
 func (ms *MySimulatorOrder) Simulate(g goga.Genome) {
 	ms.Order = append(ms.Order, 2)
 	ms.BeginCalled = true
 }
-func (ms *MySimulatorOrder) OnEndSimulation() {
+func (ms *MySimulatorOrder) OnEndSimulation([]goga.Genome) {
 	ms.Order = append(ms.Order, 3)
 	ms.EndCalled = true
 }
@@ -559,10 +562,11 @@ func (ms *MySimulatorCallTracker) Simulate(goga.Genome) {
 	ms.NumSimulateCalls++
 	ms.m.Unlock()
 }
-func (ms *MySimulatorCallTracker) OnBeginSimulation() {
+func (ms *MySimulatorCallTracker) OnBeginSimulation() []goga.Genome {
 	ms.NumBeginSimulationCalls++
+	return nil
 }
-func (ms *MySimulatorCallTracker) OnEndSimulation() {
+func (ms *MySimulatorCallTracker) OnEndSimulation([]goga.Genome) {
 }
 func (ms *MySimulatorCallTracker) ExitFunc(goga.Genome) bool {
 	return (ms.NumBeginSimulationCalls >= ms.NumBeginSimulationsUntilExit)

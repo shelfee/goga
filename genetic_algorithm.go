@@ -20,6 +20,7 @@ type GeneticAlgorithm struct {
 	BitsetCreate  BitsetCreate
 
 	populationSize          int
+	LRUSize                 int
 	MaterExtraRatio         int
 	randomRatio             float64
 	population              []Genome
@@ -35,9 +36,15 @@ type Options struct {
 	MaterExtraRatio     int
 	ParallelSimulations int
 	randomRatio         float64
+	LRUSize             int
 }
 type Option func(*Options)
 
+func LRUSize(n int) Option {
+	return func(o *Options) {
+		o.LRUSize = n
+	}
+}
 func PopulationSize(n int) Option {
 	return func(o *Options) {
 		o.PopulationSize = n
@@ -90,11 +97,12 @@ func (ga *GeneticAlgorithm) Init(opt ...Option) {
 		MaterExtraRatio:     2,
 		ParallelSimulations: 1,
 		randomRatio:         0.1,
+		LRUSize:             100000,
 	}
 	for _, o := range opt {
 		o(&opts)
 	}
-
+	ga.LRUSize = opts.LRUSize
 	ga.populationSize = opts.PopulationSize
 	ga.population = ga.createPopulation()
 	ga.parallelSimulations = opts.ParallelSimulations
@@ -102,8 +110,8 @@ func (ga *GeneticAlgorithm) Init(opt ...Option) {
 	ga.waitGroup = new(sync.WaitGroup)
 }
 
-func (ga *GeneticAlgorithm) beginSimulation() {
-	ga.Simulator.OnBeginSimulation()
+func (ga *GeneticAlgorithm) beginSimulation() []Genome {
+	res := ga.Simulator.OnBeginSimulation()
 	ga.totalFitness = 0
 	for i := 0; i < len(ga.population); i++ {
 		ga.totalFitness += ga.population[i].GetFitness()
@@ -121,6 +129,7 @@ func (ga *GeneticAlgorithm) beginSimulation() {
 			}
 		}(ga.genomeSimulationChannel, ga.waitGroup, ga.Simulator)
 	}
+	return res
 }
 
 func (ga *GeneticAlgorithm) onNewGenomeToSimulate(g Genome) {
@@ -160,18 +169,19 @@ func (ga *GeneticAlgorithm) shouldExit(elite Genome) bool {
 
 // Simulate runs the genetic algorithm
 func (ga *GeneticAlgorithm) Simulate() bool {
-
 	if ga.populationSize == 0 {
 		return false
 	}
-
-	ga.beginSimulation()
+	extraGenomes := ga.beginSimulation()
+	for i := 0; i < len(extraGenomes); i++ {
+		ga.population[i] = extraGenomes[i]
+	}
 	for i := 0; i < ga.populationSize; i++ {
 		ga.onNewGenomeToSimulate(ga.population[i])
 	}
 	ga.syncSimulatingGenomes()
-	ga.Simulator.OnEndSimulation()
-	lru := New(1000000)
+	ga.Simulator.OnEndSimulation(ga.population)
+	lru := New(ga.LRUSize)
 	for {
 		elite := ga.getElite()
 		ga.Mater.OnElite(elite)
@@ -179,18 +189,25 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 		if ga.shouldExit(elite) {
 			break
 		}
-
 		time.Sleep(1 * time.Microsecond)
-
-		ga.beginSimulation()
+		extraGenomes = ga.beginSimulation()
 		newPopulationSize := ga.populationSize * ga.MaterExtraRatio
 		newPopulation := make([]Genome, newPopulationSize) //ga.createPopulation()
-
-		for i := 0; i < newPopulationSize; {
+		newPopulation[0] = elite
+		pos := 1
+		for i := 0; i < len(extraGenomes) && pos < newPopulationSize/2; i++ {
+			k := extraGenomes[i].Key()
+			if _, ok := lru.Get(k); !ok {
+				newPopulation[pos] = extraGenomes[i]
+				pos++
+				lru.Add(k, nil)
+			}
+		}
+		for i := 1; i < newPopulationSize; {
 			g1 := ga.Selector.Go(ga.population, ga.totalFitness)
 			g2 := ga.Selector.Go(ga.population, ga.totalFitness)
 			g3, g4 := ga.Mater.Go(g1, g2)
-			k := string(g3.GetBits().GetAll())
+			k := g3.Key()
 			if _, ok := lru.Get(k); !ok {
 				lru.Add(k, nil)
 				newPopulation[i] = g3
@@ -198,7 +215,7 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 				i += 1
 			}
 			if i < newPopulationSize {
-				k = string(g4.GetBits().GetAll())
+				k = g4.Key()
 				if _, ok := lru.Get(k); !ok {
 					lru.Add(k, nil)
 					newPopulation[i] = g4
@@ -219,7 +236,7 @@ func (ga *GeneticAlgorithm) Simulate() bool {
 				ga.population[i] = NewGenome(ga.BitsetCreate.Go())
 			}
 		}
-		ga.Simulator.OnEndSimulation()
+		ga.Simulator.OnEndSimulation(ga.population)
 	}
 
 	return true

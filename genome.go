@@ -7,6 +7,7 @@ type Genome interface {
 	GetBits() *Bitset
 	GetOrigin() float64
 	SetOrigin(float64)
+	Key() string
 }
 
 type genome struct {
@@ -23,6 +24,10 @@ func NewGenome(bitset Bitset) Genome {
 
 func (g *genome) GetFitness() float64 {
 	return g.fitness
+}
+
+func (g *genome) Key() string {
+	return string(g.bitset.GetAll())
 }
 
 func (g *genome) SetFitness(fitness float64) {
