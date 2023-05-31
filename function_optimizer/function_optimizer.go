@@ -9,16 +9,18 @@ import (
 )
 
 type funcMaterSimulator struct {
-	function      func([]float64) float64
-	transFunc     func(float642 float64) float64
-	paramSize     int
-	minIter       int
-	stableMinIter int
-	iter          int
-	stableIter    int
-	lastFitness   float64
-	onBegin       func()
-	onEnd         func()
+	function       func([]float64) float64
+	transFunc      func(float642 float64) float64
+	paramSize      int
+	minIter        int
+	stableExitIter int
+	stableMinIter  int
+	onStable       func()
+	iter           int
+	stableIter     int
+	lastFitness    float64
+	onBegin        func()
+	onEnd          func()
 }
 
 func (sms *funcMaterSimulator) OnBeginSimulation() {
@@ -41,10 +43,16 @@ func (sms *funcMaterSimulator) ExitFunc(g goga.Genome) bool {
 	if g.GetFitness() != sms.lastFitness {
 		sms.stableIter = 0
 	}
+	sms.lastFitness = g.GetFitness()
 	sms.stableIter += 1
 	sms.iter += 1
-	if sms.minIter < sms.iter && sms.stableIter < sms.stableMinIter {
+	if sms.minIter < sms.iter && sms.stableIter < sms.stableExitIter {
 		return true
+	}
+	if sms.stableIter > sms.stableMinIter {
+		if sms.onStable != nil {
+			sms.onStable()
+		}
 	}
 	return false
 }
@@ -104,14 +112,17 @@ type Options struct {
 	function        func([]float64) float64
 	transFunc       func(float64) float64
 	minIter         int
+	stableExitIter  int
 	stableMinIter   int
 	populationSize  int
 	numThreads      int
 	materExtraRatio int
+	lruSize         int
 	randomRatio     float64
 	onBegin         func()
 	onEnd           func()
 	onElite         func(g goga.Genome)
+	onStable        func()
 
 	mater    goga.Mater
 	selector goga.Selector
@@ -133,13 +144,21 @@ func OnElite(n func(g goga.Genome)) Option {
 		o.onElite = n
 	}
 }
-
+func OnStable(n func()) Option {
+	return func(o *Options) {
+		o.onStable = n
+	}
+}
 func PopulationSize(n int) Option {
 	return func(o *Options) {
 		o.populationSize = n
 	}
 }
-
+func LRUSize(n int) Option {
+	return func(o *Options) {
+		o.lruSize = n
+	}
+}
 func NumThreads(n int) Option {
 	return func(o *Options) {
 		o.numThreads = n
@@ -166,6 +185,12 @@ func Selector(n goga.Selector) Option {
 		o.selector = n
 	}
 }
+func StableExitIter(n int) Option {
+	return func(o *Options) {
+		o.stableExitIter = n
+	}
+}
+
 func StableMinIter(n int) Option {
 	return func(o *Options) {
 		o.stableMinIter = n
@@ -208,9 +233,11 @@ func NewFuncAlgo(o ...Option) goga.GeneticAlgorithm {
 		function:        func(float64s []float64) float64 { return rand.Float64() },
 		transFunc:       func(f float64) float64 { return f },
 		minIter:         200,
-		stableMinIter:   200,
+		stableExitIter:  50,
+		stableMinIter:   10,
 		populationSize:  600,
-		numThreads:      runtime.NumCPU(),
+		lruSize:         2400,
+		numThreads:      runtime.NumCPU() - 1,
 		materExtraRatio: 4,
 		randomRatio:     0.3,
 	}
@@ -234,17 +261,24 @@ func NewFuncAlgo(o ...Option) goga.GeneticAlgorithm {
 	)
 	genAlgo := goga.NewGeneticAlgorithm()
 	s := funcMaterSimulator{
-		paramSize:     opts.paramSize,
-		function:      opts.function,
-		transFunc:     opts.transFunc,
-		stableMinIter: opts.stableMinIter,
-		minIter:       opts.minIter,
+		paramSize:      opts.paramSize,
+		function:       opts.function,
+		transFunc:      opts.transFunc,
+		stableExitIter: opts.stableExitIter,
+		stableMinIter:  opts.stableMinIter,
+
+		minIter:  opts.minIter,
+		onBegin:  opts.onBegin,
+		onEnd:    opts.onEnd,
+		onStable: opts.onStable,
 	}
 	genAlgo.Simulator = &s
 	genAlgo.BitsetCreate = &myBitsetCreate{paramsSize: opts.paramSize, requirement: opts.requirement}
-	genAlgo.EliteConsumer = &myEliteConsumer{}
+	genAlgo.EliteConsumer = &myEliteConsumer{
+		onElite: opts.onElite,
+	}
 	genAlgo.Mater = opts.mater
 	genAlgo.Selector = opts.selector
-	genAlgo.Init(goga.PopulationSize(opts.populationSize), goga.ParallelSimulations(opts.numThreads), goga.MaterExtraRatio(opts.materExtraRatio), goga.RandomRatio(opts.randomRatio))
+	genAlgo.Init(goga.LRUSize(opts.lruSize), goga.PopulationSize(opts.populationSize), goga.ParallelSimulations(opts.numThreads), goga.MaterExtraRatio(opts.materExtraRatio), goga.RandomRatio(opts.randomRatio))
 	return genAlgo
 }
